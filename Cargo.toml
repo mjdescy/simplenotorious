@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/ffi"]
+# crates/linux needs GTK4/libadwaita/WebKitGTK dev packages; build it explicitly:
+#   cargo build -p simplenotorious-linux --manifest-path crates/linux/Cargo.toml
+exclude = ["crates/linux"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = "s"

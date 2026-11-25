@@ -1,0 +1,10 @@
+target/
+crates/linux/target/
+macos/.build/
+macos/lib/
+macos/Simplenotorious.app/
+dist/
+
+# local reference files
+/notes.json
+/simplenote screenshot.webp

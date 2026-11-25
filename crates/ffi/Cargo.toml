@@ -1,0 +1,12 @@
+[package]
+name = "simplenotorious-ffi"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+simplenotorious-core = { path = "../core" }
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }

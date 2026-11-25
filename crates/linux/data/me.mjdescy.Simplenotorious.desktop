@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Simplenotorious
+Comment=Markdown notes synced with SimpleNote
+Exec=simplenotorious
+Icon=accessories-text-editor-symbolic
+Categories=Utility;TextEditor;GTK;
+StartupWMClass=me.mjdescy.Simplenotorious

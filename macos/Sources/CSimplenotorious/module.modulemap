@@ -1,0 +1,4 @@
+module CSimplenotorious {
+    header "simplenotorious.h"
+    export *
+}

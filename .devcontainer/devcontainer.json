@@ -1,0 +1,47 @@
+{
+  "name": "Simplenotorious (Fedora + GTK4)",
+  "build": { "dockerfile": "Dockerfile" },
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspaces/simplenotorious",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/simplenotorious,type=bind,Z",
+
+  // Rootless podman (Bluefin): map host user to the container user, and let the
+  // container reach the GPU and the host's SELinux-labelled Wayland socket.
+  "runArgs": [
+    "--userns=keep-id",
+    "--security-opt=label=disable",
+    "--device=/dev/dri"
+  ],
+
+  "containerEnv": {
+    "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+    "XDG_RUNTIME_DIR": "/tmp/xdg-runtime",
+    "GDK_BACKEND": "wayland",
+    // WebKitGTK's own sandbox (bubblewrap) can't nest inside a container
+    "WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS": "1",
+    "WEBKIT_DISABLE_DMABUF_RENDERER": "1",
+    "CARGO_TARGET_DIR": "/home/vscode/target"
+  },
+
+  "mounts": [
+    // Wayland socket from the host session
+    "source=${localEnv:XDG_RUNTIME_DIR}/${localEnv:WAYLAND_DISPLAY},target=/tmp/xdg-runtime/${localEnv:WAYLAND_DISPLAY},type=bind",
+    // Keep notes, settings and the SimpleNote login across container rebuilds
+    "source=simplenotorious-data,target=/home/vscode/.local/share/simplenotorious,type=volume",
+    "source=simplenotorious-config,target=/home/vscode/.config/simplenotorious,type=volume",
+    // Cargo cache + build output (faster than the bind mount)
+    "source=simplenotorious-cargo,target=/home/vscode/.cargo/registry,type=volume",
+    "source=simplenotorious-target,target=/home/vscode/target,type=volume"
+  ],
+
+  "postCreateCommand": "sudo mkdir -p /tmp/xdg-runtime && sudo chown -R vscode:vscode /tmp/xdg-runtime /home/vscode/.local /home/vscode/.config /home/vscode/.cargo/registry /home/vscode/target && chmod 700 /tmp/xdg-runtime",
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer", "tamasfe.even-better-toml"],
+      "settings": {
+        "rust-analyzer.linkedProjects": ["Cargo.toml", "crates/linux/Cargo.toml"]
+      }
+    }
+  }
+}

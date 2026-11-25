@@ -1,0 +1,55 @@
+use crate::error::Result;
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    /// Follow the operating system's light/dark setting.
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct Settings {
+    pub theme: Theme,
+    /// Folder of plain-text `.md` files mirroring the notes.
+    pub notes_folder: Option<PathBuf>,
+    /// Keep a SimpleNote-format `notes.json` in sync with the store.
+    pub json_sync_enabled: bool,
+    pub json_path: Option<PathBuf>,
+    pub sidebar_collapsed: bool,
+    pub sync_interval_secs: u64,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            theme: Theme::System,
+            notes_folder: None,
+            json_sync_enabled: false,
+            json_path: None,
+            sidebar_collapsed: false,
+            sync_interval_secs: 60,
+        }
+    }
+}
+
+impl Settings {
+    pub fn load(path: &Path) -> Settings {
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default()
+    }
+
+    pub fn save(&self, path: &Path) -> Result<()> {
+        if let Some(p) = path.parent() {
+            std::fs::create_dir_all(p)?;
+        }
+        crate::util::atomic_write(path, serde_json::to_string_pretty(self)?.as_bytes())
+    }
+}
