@@ -483,6 +483,7 @@ impl Ui {
         }
         add("bold", Box::new(|ui| ui.toggle_emphasis(true)));
         add("italic", Box::new(|ui| ui.toggle_emphasis(false)));
+        add("link", Box::new(|ui| ui.insert_link()));
         add(
             "preview",
             Box::new(|ui| ui.preview_btn.set_active(!ui.preview_btn.is_active())),
@@ -534,6 +535,7 @@ impl Ui {
         }
         app.set_accels_for_action("win.bold", &["<Control>b"]);
         app.set_accels_for_action("win.italic", &["<Control>i"]);
+        app.set_accels_for_action("win.link", &["<Control>k"]);
         app.set_accels_for_action("win.sidebar", &["F9"]);
         app.set_accels_for_action("win.focus-search", &["<Control>f"]);
         app.set_accels_for_action("window.close", &["<Control>w"]);
@@ -1031,6 +1033,45 @@ impl Ui {
         }
     }
 
+    /// Turn the selection into a Markdown link: `[selection]()` with the cursor
+    /// between the parentheses. With no selection, the word at the cursor is
+    /// used; if there is none, insert `[]()` with the cursor between the brackets.
+    fn insert_link(&self) {
+        if !self.view.is_editable() {
+            return;
+        }
+        let buf = &self.buffer;
+        let cursor = buf.iter_at_mark(&buf.get_insert());
+        let range = if let Some((a, b)) = buf.selection_bounds() {
+            Some((a.offset(), b.offset()))
+        } else if cursor.inside_word() || cursor.starts_word() || cursor.ends_word() {
+            let mut a = cursor;
+            if !a.starts_word() {
+                a.backward_word_start();
+            }
+            let mut b = a;
+            b.forward_word_end();
+            Some((a.offset(), b.offset()))
+        } else {
+            None
+        };
+        buf.begin_user_action();
+        if let Some((so, eo)) = range {
+            let mut it = buf.iter_at_offset(eo);
+            buf.insert(&mut it, "]()");
+            let mut it = buf.iter_at_offset(so);
+            buf.insert(&mut it, "[");
+            buf.end_user_action();
+            buf.place_cursor(&buf.iter_at_offset(eo + 3));
+        } else {
+            let co = cursor.offset();
+            let mut it = buf.iter_at_offset(co);
+            buf.insert(&mut it, "[]()");
+            buf.end_user_action();
+            buf.place_cursor(&buf.iter_at_offset(co + 1));
+        }
+    }
+
     fn trash_or_restore(self: &Rc<Self>) {
         self.save_now();
         let Some(id) = self.current() else { return };
@@ -1320,6 +1361,7 @@ fn show_shortcuts(parent: &adw::ApplicationWindow) {
         &[
             ("Bold", "<Control>b"),
             ("Italic", "<Control>i"),
+            ("Insert link", "<Control>k"),
             ("Heading 1", "<Control><Alt>1"),
             ("Heading 2", "<Control><Alt>2"),
             ("Heading 3", "<Control><Alt>3"),
