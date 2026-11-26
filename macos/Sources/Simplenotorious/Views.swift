@@ -303,6 +303,21 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
             }
+            Section("Markdown") {
+                Picker("Italic marker", selection: Binding(
+                    get: { model.settings.italicMarker },
+                    set: { model.updateSetting(["italic_marker": $0.rawValue]) })) {
+                    Text("*text*").tag(EmphasisMarker.asterisk)
+                    Text("_text_").tag(EmphasisMarker.underscore)
+                }
+                Picker("Bold marker", selection: Binding(
+                    get: { model.settings.boldMarker },
+                    set: { model.updateSetting(["bold_marker": $0.rawValue]) })) {
+                    Text("**text**").tag(EmphasisMarker.asterisk)
+                    Text("__text__").tag(EmphasisMarker.underscore)
+                }
+                Text("Characters used when formatting text as italic or bold.").font(.caption).foregroundStyle(.secondary)
+            }
             Section("SimpleNote account") {
                 HStack {
                     Text(model.loggedIn ? "Logged in" : "Not logged in")

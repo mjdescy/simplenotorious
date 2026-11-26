@@ -50,6 +50,11 @@ enum ThemeSetting: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum EmphasisMarker: String, Codable, CaseIterable, Identifiable {
+    case asterisk, underscore
+    var id: String { rawValue }
+}
+
 struct AppSettings: Codable, Equatable {
     var theme: ThemeSetting = .system
     var notesFolder: String? = nil
@@ -57,6 +62,8 @@ struct AppSettings: Codable, Equatable {
     var jsonPath: String? = nil
     var sidebarCollapsed: Bool = false
     var syncIntervalSecs: Int = 60
+    var italicMarker: EmphasisMarker = .asterisk
+    var boldMarker: EmphasisMarker = .underscore
 }
 
 // MARK: - Bridge to the Rust core

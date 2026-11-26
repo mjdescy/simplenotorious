@@ -1,6 +1,6 @@
 use crate::apply_theme;
 use adw::prelude::*;
-use simplenotorious_core::{Core, Theme};
+use simplenotorious_core::{Core, EmphasisMarker, Theme};
 use std::rc::Rc;
 
 fn pick_folder(win: &adw::ApplicationWindow, done: impl Fn(std::path::PathBuf) + 'static) {
@@ -55,6 +55,43 @@ pub fn show(win: &adw::ApplicationWindow, core: &Core, on_logout: Rc<dyn Fn()>) 
         });
     }
     g.add(&combo);
+    page.add(&g);
+
+    // --- editing ---
+    let g = adw::PreferencesGroup::builder()
+        .title("Markdown")
+        .description("Characters used when formatting text as italic or bold")
+        .build();
+    let marker_row = |title: &str, subtitle: &str, items: &[&str], current: EmphasisMarker| {
+        adw::ComboRow::builder()
+            .title(title)
+            .subtitle(subtitle)
+            .model(&gtk::StringList::new(items))
+            .selected(match current {
+                EmphasisMarker::Asterisk => 0,
+                EmphasisMarker::Underscore => 1,
+            })
+            .build()
+    };
+    let to_marker = |i: u32| if i == 1 { EmphasisMarker::Underscore } else { EmphasisMarker::Asterisk };
+    let italic = marker_row("Italic marker", "Wrap italic text in", &["*text*", "_text_"], s.italic_marker);
+    {
+        let core = core.clone();
+        italic.connect_selected_notify(move |r| {
+            let m = to_marker(r.selected());
+            let _ = core.update_settings(|s| s.italic_marker = m);
+        });
+    }
+    g.add(&italic);
+    let bold = marker_row("Bold marker", "Wrap bold text in", &["**text**", "__text__"], s.bold_marker);
+    {
+        let core = core.clone();
+        bold.connect_selected_notify(move |r| {
+            let m = to_marker(r.selected());
+            let _ = core.update_settings(|s| s.bold_marker = m);
+        });
+    }
+    g.add(&bold);
     page.add(&g);
 
     // --- account ---

@@ -475,6 +475,14 @@ impl Ui {
                 }
             }),
         );
+        for level in 0..=6usize {
+            add(
+                &format!("heading-{level}"),
+                Box::new(move |ui| ui.set_heading(level)),
+            );
+        }
+        add("bold", Box::new(|ui| ui.toggle_emphasis(true)));
+        add("italic", Box::new(|ui| ui.toggle_emphasis(false)));
         add(
             "preview",
             Box::new(|ui| ui.preview_btn.set_active(!ui.preview_btn.is_active())),
@@ -518,6 +526,14 @@ impl Ui {
         app.set_accels_for_action("win.pin", &["<Control><Alt>p"]);
         app.set_accels_for_action("win.trash", &["<Control><Alt>d"]);
         app.set_accels_for_action("win.info", &["<Control><Alt>i"]);
+        for level in 0..=6 {
+            app.set_accels_for_action(
+                &format!("win.heading-{level}"),
+                &[&format!("<Control><Alt>{level}")],
+            );
+        }
+        app.set_accels_for_action("win.bold", &["<Control>b"]);
+        app.set_accels_for_action("win.italic", &["<Control>i"]);
         app.set_accels_for_action("win.sidebar", &["F9"]);
         app.set_accels_for_action("win.focus-search", &["<Control>f"]);
         app.set_accels_for_action("window.close", &["<Control>w"]);
@@ -879,6 +895,142 @@ impl Ui {
         }
     }
 
+    /// Set (level 1-6) or remove (level 0) the Markdown prefix heading on the
+    /// current line, or on every line touched by the selection.
+    fn set_heading(&self, level: usize) {
+        if !self.view.is_editable() {
+            return;
+        }
+        let buf = &self.buffer;
+        let (start, end) = buf.selection_bounds().unwrap_or_else(|| {
+            let i = buf.iter_at_mark(&buf.get_insert());
+            (i, i)
+        });
+        let first = start.line();
+        let mut last = end.line();
+        // A selection ending at column 0 of a line does not include that line.
+        if last > first && end.line_offset() == 0 {
+            last -= 1;
+        }
+        let new_prefix = if level == 0 { String::new() } else { format!("{} ", "#".repeat(level)) };
+        buf.begin_user_action();
+        for line in first..=last {
+            let Some(mut ls) = buf.iter_at_line(line) else { continue };
+            let mut le = ls;
+            if !le.ends_line() {
+                le.forward_to_line_end();
+            }
+            let text = buf.text(&ls, &le, false).to_string();
+            // On a multi-line selection, leave blank/whitespace-only lines alone.
+            if last > first && text.trim().is_empty() {
+                continue;
+            }
+            let hashes = text.chars().take_while(|c| *c == '#').count();
+            let rest = &text[hashes..];
+            let is_heading = (1..=6).contains(&hashes)
+                && (rest.is_empty() || rest.starts_with(' ') || rest.starts_with('\t'));
+            let strip = if is_heading {
+                hashes + rest.chars().take_while(|c| *c == ' ' || *c == '\t').count()
+            } else {
+                0
+            };
+            if strip == 0 && new_prefix.is_empty() {
+                continue;
+            }
+            let mut q = ls;
+            q.forward_chars(strip as i32);
+            buf.delete(&mut ls, &mut q);
+            buf.insert(&mut ls, &new_prefix);
+        }
+        buf.end_user_action();
+    }
+
+    /// Toggle bold/italic Markdown around the selection, or around the word at
+    /// the cursor when nothing is selected, using the user's marker preferences.
+    fn toggle_emphasis(&self, bold: bool) {
+        if !self.view.is_editable() {
+            return;
+        }
+        let st = self.core.settings();
+        let (marker, n) = if bold { (st.bold_marker, 2) } else { (st.italic_marker, 1) };
+        let c = marker.as_char();
+        let same_char = st.bold_marker == st.italic_marker;
+        let delim: String = std::iter::repeat_n(c, n).collect();
+        let buf = &self.buffer;
+        let cursor = buf.iter_at_mark(&buf.get_insert());
+        let co = cursor.offset();
+
+        let (mut cs, mut ce, had_sel) = if let Some((a, b)) = buf.selection_bounds() {
+            (a.offset(), b.offset(), true)
+        } else if cursor.inside_word() || cursor.starts_word() || cursor.ends_word() {
+            let mut a = cursor;
+            if !a.starts_word() {
+                a.backward_word_start();
+            }
+            let mut b = a;
+            b.forward_word_end();
+            (a.offset(), b.offset(), false)
+        } else {
+            // No word here: insert an empty pair and put the cursor inside.
+            buf.begin_user_action();
+            let mut it = buf.iter_at_offset(co);
+            buf.insert(&mut it, &format!("{delim}{delim}"));
+            buf.place_cursor(&buf.iter_at_offset(co + n as i32));
+            buf.end_user_action();
+            return;
+        };
+
+        // Markers already inside the selection/word count as existing styling.
+        let text = buf.text(&buf.iter_at_offset(cs), &buf.iter_at_offset(ce), false);
+        let len = text.chars().count();
+        let lead = text.chars().take_while(|x| *x == c).count();
+        let trail = text.chars().rev().take_while(|x| *x == c).count();
+        let t = lead.min(trail).min(len.saturating_sub(1) / 2) as i32;
+        cs += t;
+        ce -= t;
+
+        let mut left = 0;
+        let mut it = buf.iter_at_offset(cs);
+        while it.backward_char() && it.char() == c {
+            left += 1;
+        }
+        let mut right = 0;
+        let mut it = buf.iter_at_offset(ce);
+        while !it.is_end() && it.char() == c {
+            right += 1;
+            it.forward_char();
+        }
+        let k = left.min(right);
+        let present = if bold {
+            k >= 2
+        } else if same_char {
+            k % 2 == 1
+        } else {
+            k >= 1
+        };
+
+        let step = n as i32;
+        buf.begin_user_action();
+        if present {
+            let (mut a, mut b) = (buf.iter_at_offset(ce), buf.iter_at_offset(ce + step));
+            buf.delete(&mut a, &mut b);
+            let (mut a, mut b) = (buf.iter_at_offset(cs - step), buf.iter_at_offset(cs));
+            buf.delete(&mut a, &mut b);
+        } else {
+            let mut it = buf.iter_at_offset(ce);
+            buf.insert(&mut it, &delim);
+            let mut it = buf.iter_at_offset(cs);
+            buf.insert(&mut it, &delim);
+        }
+        buf.end_user_action();
+        let shift = if present { -step } else { step };
+        if had_sel {
+            buf.select_range(&buf.iter_at_offset(cs + shift), &buf.iter_at_offset(ce + shift));
+        } else {
+            buf.place_cursor(&buf.iter_at_offset(co.clamp(cs, ce) + shift));
+        }
+    }
+
     fn trash_or_restore(self: &Rc<Self>) {
         self.save_now();
         let Some(id) = self.current() else { return };
@@ -1162,6 +1314,20 @@ fn show_shortcuts(parent: &adw::ApplicationWindow) {
     section(
         "Navigation",
         &[("Search notes", "<Control>f"), ("Toggle sidebar", "F9"), ("Sync now", "<Control>r")],
+    );
+    section(
+        "Editor",
+        &[
+            ("Bold", "<Control>b"),
+            ("Italic", "<Control>i"),
+            ("Heading 1", "<Control><Alt>1"),
+            ("Heading 2", "<Control><Alt>2"),
+            ("Heading 3", "<Control><Alt>3"),
+            ("Heading 4", "<Control><Alt>4"),
+            ("Heading 5", "<Control><Alt>5"),
+            ("Heading 6", "<Control><Alt>6"),
+            ("Remove heading", "<Control><Alt>0"),
+        ],
     );
     section(
         "General",
