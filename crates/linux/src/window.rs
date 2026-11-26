@@ -90,6 +90,7 @@ impl Ui {
             .selection_mode(gtk::SelectionMode::Single)
             .build();
         list.add_css_class("navigation-sidebar");
+        list.add_css_class("note-list");
         let list_scroll = gtk::ScrolledWindow::builder()
             .child(&list)
             .vexpand(true)
@@ -239,6 +240,11 @@ impl Ui {
         tag_bar.set_margin_bottom(8);
         tag_bar.append(&tag_box);
         tag_bar.append(&tag_entry);
+
+        // Keep the sidebar's sync-status bar the same height as the tag bar.
+        let bar_height = gtk::SizeGroup::new(gtk::SizeGroupMode::Vertical);
+        bar_height.add_widget(&tag_bar);
+        bar_height.add_widget(&status_lbl);
 
         let content_body = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content_body.append(&content);

@@ -2052,7 +2052,7 @@ dependencies = [
 
 [[package]]
 name = "simplenotorious-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ammonia",
  "chrono",
@@ -2070,7 +2070,7 @@ dependencies = [
 
 [[package]]
 name = "simplenotorious-ffi"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",

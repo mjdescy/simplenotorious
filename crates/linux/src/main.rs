@@ -18,7 +18,9 @@ const CSS: &str = "
 .note-snippet { opacity: 0.65; font-size: 0.9em; }
 .note-title { font-weight: 700; }
 .tag-chip { background: alpha(@accent_bg_color, 0.2); color: @accent_color; border-radius: 6px; padding: 1px 10px; min-height: 0; }
-.sync-status { opacity: 0.7; font-size: 0.85em; }
+.sync-status { opacity: 0.7; }
+/* Fixed horizontal metrics so the sync status can align with the note text. */
+list.note-list > row { margin: 2px 6px; padding-left: 0; padding-right: 0; }
 textview.editor { font-size: 1.05em; }
 ";
 
