@@ -165,6 +165,7 @@ impl Ui {
         menu.append(Some("Export notes.json…"), Some("win.export"));
         let sec = gio::Menu::new();
         sec.append(Some("Preferences"), Some("app.preferences"));
+        sec.append(Some("Keyboard Shortcuts"), Some("app.shortcuts"));
         sec.append(Some("Log Out…"), Some("win.logout"));
         sec.append(Some("About Simplenotorious"), Some("app.about"));
         menu.append_section(None, &sec);
@@ -503,6 +504,13 @@ impl Ui {
             });
         }
         app.add_action(&about);
+        let shortcuts = gio::SimpleAction::new("shortcuts", None);
+        {
+            let ui = ui.clone();
+            shortcuts.connect_activate(move |_, _| show_shortcuts(&ui.win));
+        }
+        app.add_action(&shortcuts);
+        app.set_accels_for_action("app.shortcuts", &["<Control>question", "<Control><Shift>slash"]);
         app.set_accels_for_action("app.preferences", &["<Control>comma"]);
         app.set_accels_for_action("win.new-note", &["<Control>n"]);
         app.set_accels_for_action("win.sync", &["<Control>r"]);
@@ -1129,4 +1137,40 @@ fn fmt_clock(ms: i64) -> String {
         .and_then(|d| d.format("%l:%M %p").ok())
         .map(|s| s.trim().to_string())
         .unwrap_or_default()
+}
+
+/// GNOME-style keyboard shortcuts overlay (Ctrl+?).
+fn show_shortcuts(parent: &adw::ApplicationWindow) {
+    let dialog = adw::ShortcutsDialog::new();
+    let section = |title: &str, items: &[(&str, &str)]| {
+        let s = adw::ShortcutsSection::new(Some(title));
+        for (t, a) in items {
+            s.add(adw::ShortcutsItem::new(t, a));
+        }
+        dialog.add(s);
+    };
+    section(
+        "Notes",
+        &[
+            ("New note", "<Control>n"),
+            ("Pin note", "<Control><Alt>p"),
+            ("Move to trash / restore note", "<Control><Alt>d"),
+            ("Note information", "<Control><Alt>i"),
+            ("Toggle Markdown preview", "<Control>p"),
+        ],
+    );
+    section(
+        "Navigation",
+        &[("Search notes", "<Control>f"), ("Toggle sidebar", "F9"), ("Sync now", "<Control>r")],
+    );
+    section(
+        "General",
+        &[
+            ("Preferences", "<Control>comma"),
+            ("Keyboard shortcuts", "<Control>question"),
+            ("Close window", "<Control>w"),
+            ("Quit", "<Control>q"),
+        ],
+    );
+    dialog.present(Some(parent));
 }
