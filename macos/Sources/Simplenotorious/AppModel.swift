@@ -246,7 +246,13 @@ final class AppModel: ObservableObject {
         guard let n = openNote else { return }
         do {
             try core?.run(n.deleted ? "restore" : "trash", ["id": n.id])
-            toast = n.deleted ? "Note restored" : "Note moved to trash"
+            if n.deleted {
+                toast = "Note restored"
+            } else {
+                // An empty, never-synced note is discarded rather than trashed.
+                let remaining = try? core?.call("get", ["id": n.id], as: Note?.self)
+                toast = (remaining ?? nil) == nil ? "Empty note deleted" : "Note moved to trash"
+            }
             setSelection(nil)
             openID = nil; openNote = nil; text = ""
             refresh()

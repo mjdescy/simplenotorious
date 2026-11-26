@@ -290,7 +290,18 @@ impl Core {
         let id = &self.resolve_id(id);
         let n = self.inner.store.get(id)?.ok_or_else(|| Error::msg("note not found"))?;
         if n.version.is_none() && n.content.trim().is_empty() {
-            self.inner.store.delete_local(id)?;
+            {
+                // Also remove the mirrored .md file; otherwise the next folder
+                // sync would re-import it as a brand-new note.
+                let _g = self.inner.work.lock().unwrap();
+                let dir = self.notes_folder();
+                for (fid, name, _) in self.inner.store.files()? {
+                    if fid == *id {
+                        let _ = std::fs::remove_file(dir.join(name));
+                    }
+                }
+                self.inner.store.delete_local(id)?;
+            }
             self.poke(Cmd::Changed);
             return Ok(());
         }
@@ -489,6 +500,20 @@ mod tests {
             .len(),
             1
         );
+    }
+
+    #[test]
+    fn trashing_blank_note_does_not_resurrect_it() {
+        let (c, _d) = core();
+        let n = c.create_note().unwrap();
+        c.flush_exports().unwrap(); // blank note is mirrored to a file
+        assert!(std::fs::read_dir(c.notes_folder())
+            .unwrap()
+            .any(|e| e.unwrap().path().extension().is_some_and(|x| x == "md")));
+        c.trash(&n.id).unwrap();
+        c.flush_exports().unwrap();
+        assert!(c.list(&Filter::default()).unwrap().is_empty());
+        assert!(c.list(&Filter { trash: true, ..Default::default() }).unwrap().is_empty());
     }
 
     #[test]

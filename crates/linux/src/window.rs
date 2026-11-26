@@ -799,8 +799,12 @@ impl Ui {
         };
         match r {
             Ok(()) => {
+                // An empty, never-synced note is discarded rather than trashed.
+                let discarded = !deleted && self.core.get(&id).ok().flatten().is_none();
                 self.toast(if deleted {
                     "Note restored"
+                } else if discarded {
+                    "Empty note deleted"
                 } else {
                     "Note moved to trash"
                 });
