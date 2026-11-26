@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>me.mjdescy.Simplenotorious</id>
+  <name>Simplenotorious</name>
+  <summary>Markdown notes synced with SimpleNote</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="me.mjdescy"><name>Michael Descy</name></developer>
+  <description>
+    <p>A native Markdown notes app for SimpleNote. Notes are stored locally as plain
+    text files, work offline, and sync with SimpleNote when a connection is available.</p>
+    <ul>
+      <li>Markdown editor with a read-only HTML preview</li>
+      <li>Light, dark, or follow-the-system appearance</li>
+      <li>Notes kept as a folder of .md files, with optional notes.json export</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">me.mjdescy.Simplenotorious.desktop</launchable>
+  <url type="homepage">https://github.com/mjdescy/simplenotorious</url>
+  <url type="bugtracker">https://github.com/mjdescy/simplenotorious/issues</url>
+  <content_rating type="oars-1.1"/>
+  <supports><control>keyboard</control><control>pointing</control></supports>
+  <requires><display_length compare="ge">360</display_length></requires>
+  <categories><category>Utility</category><category>TextEditor</category></categories>
+</component>

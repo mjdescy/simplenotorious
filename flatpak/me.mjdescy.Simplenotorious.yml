@@ -1,0 +1,45 @@
+app-id: me.mjdescy.Simplenotorious
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: simplenotorious
+
+finish-args:
+  - --share=network          # SimpleNote sync
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+
+modules:
+  - name: simplenotorious
+    buildsystem: simple
+    build-options:
+      env:
+        CARGO_HOME: /run/build/simplenotorious/cargo
+    build-commands:
+      # cargo-sources.json (generated from crates/linux/Cargo.lock) vendors every crate
+      - cargo --offline fetch --manifest-path crates/linux/Cargo.toml --verbose
+      - cargo --offline build --release --verbose --manifest-path crates/linux/Cargo.toml
+      - install -Dm755 crates/linux/target/release/simplenotorious -t /app/bin
+      - install -Dm644 crates/linux/data/me.mjdescy.Simplenotorious.desktop -t /app/share/applications
+      - install -Dm644 flatpak/me.mjdescy.Simplenotorious.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 flatpak/me.mjdescy.Simplenotorious.svg -t /app/share/icons/hicolor/scalable/apps
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - .git
+          - target
+          - dist
+          - crates/linux/target
+          - macos
+          - flatpak/.flatpak-builder
+          - flatpak/build-dir
+          - flatpak/repo
+      - cargo-sources.json
