@@ -77,7 +77,6 @@ impl Ui {
         let side_header = adw::HeaderBar::new();
         side_header.set_title_widget(Some(&search));
         side_header.set_show_end_title_buttons(false);
-        side_header.pack_end(&new_btn);
 
         let filter_model = gtk::StringList::new(&["All Notes", "Trash"]);
         let filter_dd = gtk::DropDown::builder().model(&filter_model).build();
@@ -270,6 +269,39 @@ impl Ui {
             .bidirectional()
             .sync_create()
             .build();
+
+        // The "new note" button lives in the sidebar header while the sidebar is
+        // shown, and moves to the far left of the content header while it is hidden.
+        let place_new_btn = {
+            let new_btn = new_btn.clone();
+            let side_header = side_header.clone();
+            let header = header.clone();
+            let sidebar_btn = sidebar_btn.clone();
+            move |sidebar_shown: bool| {
+                let (from, to) = if sidebar_shown {
+                    (&header, &side_header)
+                } else {
+                    (&side_header, &header)
+                };
+                // Detach from whichever bar currently holds the button.
+                if new_btn.is_ancestor(from) {
+                    from.remove(&new_btn);
+                }
+                if new_btn.parent().is_none() {
+                    if sidebar_shown {
+                        to.pack_end(&new_btn);
+                    } else {
+                        // Leftmost: pack before the sidebar toggle, which is
+                        // re-packed after it.
+                        header.remove(&sidebar_btn);
+                        to.pack_start(&new_btn);
+                        to.pack_start(&sidebar_btn);
+                    }
+                }
+            }
+        };
+        place_new_btn(split.shows_sidebar());
+        split.connect_show_sidebar_notify(move |s| place_new_btn(s.shows_sidebar()));
 
         let banner = adw::Banner::builder()
             .title("You're offline. Changes are saved on this computer and will sync when the connection returns.")

@@ -126,11 +126,19 @@ struct SidebarView: View {
                 } label: { Image(systemName: "line.3.horizontal.decrease.circle") }
                 .help("Filter notes")
             }
-            ToolbarItem(placement: .automatic) {
-                Button { model.newNote() } label: { Image(systemName: "square.and.pencil") }
-                    .help("New note (⌘N)")
+            if model.columnVisibility != .detailOnly {
+                ToolbarItem(placement: .automatic) { NewNoteButton() }
             }
         }
+    }
+}
+
+/// Shown in the sidebar toolbar, or in the detail toolbar while the sidebar is hidden.
+struct NewNoteButton: View {
+    @EnvironmentObject var model: AppModel
+    var body: some View {
+        Button { model.newNote() } label: { Image(systemName: "square.and.pencil") }
+            .help("New note (⌘N)")
     }
 }
 
@@ -178,6 +186,9 @@ struct DetailView: View {
             }
         }
         .toolbar {
+            if model.columnVisibility == .detailOnly {
+                ToolbarItem(placement: .navigation) { NewNoteButton() }
+            }
             ToolbarItemGroup(placement: .primaryAction) {
                 Button { model.togglePin() } label: {
                     Image(systemName: model.openNote?.pinned == true ? "pin.fill" : "pin")
