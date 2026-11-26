@@ -64,6 +64,7 @@ struct AppSettings: Codable, Equatable {
     var syncIntervalSecs: Int = 60
     var italicMarker: EmphasisMarker = .asterisk
     var boldMarker: EmphasisMarker = .underscore
+    var textScale: Double = 1.0
 }
 
 // MARK: - Bridge to the Rust core

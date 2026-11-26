@@ -45,6 +45,8 @@ pub struct Settings {
     pub italic_marker: EmphasisMarker,
     /// Marker for bold: `**text**` or `__text__`.
     pub bold_marker: EmphasisMarker,
+    /// App-wide text scale factor; 1.0 is the default size.
+    pub text_scale: f64,
 }
 
 impl Default for Settings {
@@ -58,11 +60,24 @@ impl Default for Settings {
             sync_interval_secs: 60,
             italic_marker: EmphasisMarker::Asterisk,
             bold_marker: EmphasisMarker::Underscore,
+            text_scale: 1.0,
         }
     }
 }
 
 impl Settings {
+    pub const MIN_TEXT_SCALE: f64 = 0.5;
+    pub const MAX_TEXT_SCALE: f64 = 3.0;
+
+    /// The saved text scale, clamped to the supported range.
+    pub fn clamped_text_scale(&self) -> f64 {
+        if self.text_scale.is_finite() {
+            self.text_scale.clamp(Self::MIN_TEXT_SCALE, Self::MAX_TEXT_SCALE)
+        } else {
+            1.0
+        }
+    }
+
     /// Opening/closing delimiter for italics ("*" or "_").
     pub fn italic_delimiter(&self) -> String {
         self.italic_marker.as_char().to_string()

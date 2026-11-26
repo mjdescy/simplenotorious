@@ -208,6 +208,7 @@ impl Ui {
         if let Some(s) = WebViewExt::settings(&webview) {
             s.set_enable_javascript(false); // read-only preview: no scripts
         }
+        webview.set_zoom_level(core.settings().clamped_text_scale());
         webview.set_vexpand(true);
         webview.set_hexpand(true);
         // links open in the user's browser; the preview itself never navigates
@@ -484,6 +485,9 @@ impl Ui {
         add("bold", Box::new(|ui| ui.toggle_emphasis(true)));
         add("italic", Box::new(|ui| ui.toggle_emphasis(false)));
         add("link", Box::new(|ui| ui.insert_link()));
+        add("zoom-in", Box::new(|ui| ui.change_text_scale(Some(0.1))));
+        add("zoom-out", Box::new(|ui| ui.change_text_scale(Some(-0.1))));
+        add("zoom-reset", Box::new(|ui| ui.change_text_scale(None)));
         add(
             "preview",
             Box::new(|ui| ui.preview_btn.set_active(!ui.preview_btn.is_active())),
@@ -536,6 +540,15 @@ impl Ui {
         app.set_accels_for_action("win.bold", &["<Control>b"]);
         app.set_accels_for_action("win.italic", &["<Control>i"]);
         app.set_accels_for_action("win.link", &["<Control>k"]);
+        app.set_accels_for_action(
+            "win.zoom-in",
+            &["<Control>plus", "<Control>equal", "<Control><Shift>plus", "<Control><Shift>equal", "<Control>KP_Add"],
+        );
+        app.set_accels_for_action(
+            "win.zoom-out",
+            &["<Control>minus", "<Control>underscore", "<Control><Shift>underscore", "<Control>KP_Subtract"],
+        );
+        app.set_accels_for_action("win.zoom-reset", &["<Control>0", "<Control>KP_0"]);
         app.set_accels_for_action("win.sidebar", &["F9"]);
         app.set_accels_for_action("win.focus-search", &["<Control>f"]);
         app.set_accels_for_action("window.close", &["<Control>w"]);
@@ -1033,6 +1046,24 @@ impl Ui {
         }
     }
 
+    /// Change the app-wide text scale by `delta` (or reset to 1.0 for `None`),
+    /// apply it immediately and save it to the preferences.
+    fn change_text_scale(&self, delta: Option<f64>) {
+        use simplenotorious_core::Settings;
+        let cur = self.core.settings().clamped_text_scale();
+        let next = match delta {
+            Some(d) => (cur + d).clamp(Settings::MIN_TEXT_SCALE, Settings::MAX_TEXT_SCALE),
+            None => 1.0,
+        };
+        let next = (next * 100.0).round() / 100.0;
+        if (next - cur).abs() < f64::EPSILON {
+            return;
+        }
+        let _ = self.core.update_settings(|s| s.text_scale = next);
+        crate::apply_text_scale(next);
+        self.webview.set_zoom_level(next);
+    }
+
     /// Turn the selection into a Markdown link: `[selection]()` with the cursor
     /// between the parentheses. With no selection, the word at the cursor is
     /// used; if there is none, insert `[]()` with the cursor between the brackets.
@@ -1376,6 +1407,9 @@ fn show_shortcuts(parent: &adw::ApplicationWindow) {
         &[
             ("Preferences", "<Control>comma"),
             ("Keyboard shortcuts", "<Control>question"),
+            ("Increase text size", "<Control>plus"),
+            ("Decrease text size", "<Control>minus"),
+            ("Reset text size", "<Control>0"),
             ("Close window", "<Control>w"),
             ("Quit", "<Control>q"),
         ],

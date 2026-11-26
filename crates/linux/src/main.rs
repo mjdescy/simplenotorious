@@ -14,6 +14,18 @@ pub fn apply_theme(t: Theme) {
     });
 }
 
+thread_local! {
+    static SCALE_PROVIDER: gtk::CssProvider = gtk::CssProvider::new();
+}
+
+/// Scale all text in the app (1.0 = default size).
+pub fn apply_text_scale(scale: f64) {
+    SCALE_PROVIDER.with(|p| {
+        // font-size is inherited, so scaling the window root scales every widget.
+        p.load_from_data(&format!("window {{ font-size: {}%; }}", (scale * 100.0).round()));
+    });
+}
+
 const CSS: &str = "
 .note-snippet { opacity: 0.65; font-size: 0.9em; }
 .note-title { font-weight: 700; }
@@ -39,6 +51,9 @@ fn main() -> adw::glib::ExitCode {
         provider.load_from_data(CSS);
         if let Some(display) = gtk::gdk::Display::default() {
             gtk::style_context_add_provider_for_display(&display, &provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+            SCALE_PROVIDER.with(|p| {
+                gtk::style_context_add_provider_for_display(&display, p, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
+            });
         }
     });
 
@@ -49,6 +64,7 @@ fn main() -> adw::glib::ExitCode {
             return;
         }
         apply_theme(c.settings().theme);
+        apply_text_scale(c.settings().clamped_text_scale());
         window::build(app, &c);
     });
 
