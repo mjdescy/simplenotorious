@@ -3,6 +3,6 @@ Type=Application
 Name=Simplenotorious
 Comment=Markdown notes synced with SimpleNote
 Exec=simplenotorious
-Icon=accessories-text-editor-symbolic
+Icon=me.mjdescy.Simplenotorious
 Categories=Utility;TextEditor;GTK;
 StartupWMClass=me.mjdescy.Simplenotorious

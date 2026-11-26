@@ -40,6 +40,14 @@ cargo test --workspace                   # core tests
 ```
 Notes/login persist in named volumes across rebuilds. The container disables WebKit's nested sandbox (it can't run inside a container).
 
+## Flatpak releases
+Pushing a tag that starts with `v` builds a Flatpak bundle in GitHub Actions and attaches it to a GitHub release:
+```
+git tag v0.1.0 && git push origin v0.1.0
+```
+Users install it with `flatpak install --user simplenotorious-v0.1.0.flatpak` (the GNOME 49 runtime comes from Flathub).
+The recipe is in `flatpak/`; `flatpak/build-local.sh` builds and installs it locally. The workflow is `.github/workflows/flatpak.yml`.
+
 ## Build & run — macOS (Xcode 15+, rustup)
 ```
 cd macos && ./build.sh && open Simplenotorious.app

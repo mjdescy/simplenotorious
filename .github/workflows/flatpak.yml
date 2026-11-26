@@ -1,0 +1,40 @@
+name: Flatpak release
+
+# Builds a .flatpak bundle and attaches it to a GitHub release whenever a
+# version tag (e.g. v0.1.0) is pushed.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  flatpak:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-49
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate vendored Cargo sources
+        run: |
+          python3 -m pip install --quiet aiohttp tomlkit
+          curl -sSfLo flatpak/flatpak-cargo-generator.py \
+            https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
+          python3 flatpak/flatpak-cargo-generator.py crates/linux/Cargo.lock -o flatpak/cargo-sources.json
+
+      - name: Build Flatpak bundle
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: simplenotorious-${{ github.ref_name }}.flatpak
+          manifest-path: flatpak/me.mjdescy.Simplenotorious.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: simplenotorious-${{ github.ref_name }}.flatpak
+          generate_release_notes: true
