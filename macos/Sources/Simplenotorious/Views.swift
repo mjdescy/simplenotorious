@@ -192,12 +192,13 @@ struct DetailView: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button { model.togglePin() } label: {
                     Image(systemName: model.openNote?.pinned == true ? "pin.fill" : "pin")
-                }.help("Pin note").disabled(model.openNote == nil)
+                }.help("Pin note (⌃⌥P)").keyboardShortcut("p", modifiers: [.control, .option]).disabled(model.openNote == nil)
                 Button { model.trashOrRestore() } label: {
                     Image(systemName: model.openNote?.deleted == true ? "arrow.uturn.backward" : "trash")
-                }.help(model.openNote?.deleted == true ? "Restore note" : "Move to trash").disabled(model.openNote == nil)
+                }.help(model.openNote?.deleted == true ? "Restore note (⌃⌥D)" : "Move to trash (⌃⌥D)")
+                    .keyboardShortcut("d", modifiers: [.control, .option]).disabled(model.openNote == nil)
                 Button { showInfo.toggle() } label: { Image(systemName: "info.circle") }
-                    .help("Note information").disabled(model.openNote == nil)
+                    .help("Note information (⌃⌥I)").keyboardShortcut("i", modifiers: [.control, .option]).disabled(model.openNote == nil)
                     .popover(isPresented: $showInfo) { InfoView(note: model.openNote, text: model.text).padding() }
                 Toggle(isOn: $model.showPreview) { Image(systemName: "eye") }
                     .toggleStyle(.button).help("Toggle Markdown preview (⌘P)").disabled(model.openNote == nil)

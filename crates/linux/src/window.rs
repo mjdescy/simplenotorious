@@ -48,6 +48,7 @@ struct Ui {
     pin_btn: gtk::ToggleButton,
     preview_btn: gtk::ToggleButton,
     trash_btn: gtk::Button,
+    info_btn: gtk::MenuButton,
     info_lbl: gtk::Label,
     login_entry: gtk::Entry,
     login_btn: gtk::Button,
@@ -126,11 +127,11 @@ impl Ui {
             .build();
         let pin_btn = gtk::ToggleButton::builder()
             .icon_name("view-pin-symbolic")
-            .tooltip_text("Pin note")
+            .tooltip_text("Pin note (Ctrl+Alt+P)")
             .build();
         let trash_btn = gtk::Button::builder()
             .icon_name("user-trash-symbolic")
-            .tooltip_text("Move to trash")
+            .tooltip_text("Move to trash (Ctrl+Alt+D)")
             .build();
         let info_lbl = gtk::Label::builder().xalign(0.0).build();
         let info_pop = gtk::Popover::builder().child(&info_lbl).build();
@@ -138,9 +139,23 @@ impl Ui {
         info_lbl.set_margin_end(12);
         info_lbl.set_margin_top(10);
         info_lbl.set_margin_bottom(10);
+        // An open popover grabs key events, so give it its own Ctrl+Alt+I to close it.
+        {
+            let sc = gtk::ShortcutController::new();
+            sc.add_shortcut(gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string("<Control><Alt>i"),
+                Some(gtk::CallbackAction::new(|w, _| {
+                    if let Ok(p) = w.clone().downcast::<gtk::Popover>() {
+                        p.popdown();
+                    }
+                    glib::Propagation::Stop
+                })),
+            ));
+            info_pop.add_controller(sc);
+        }
         let info_btn = gtk::MenuButton::builder()
             .icon_name("dialog-information-symbolic")
-            .tooltip_text("Note information")
+            .tooltip_text("Note information (Ctrl+Alt+I)")
             .popover(&info_pop)
             .build();
 
@@ -394,6 +409,7 @@ impl Ui {
             pin_btn,
             preview_btn,
             trash_btn,
+            info_btn,
             info_lbl,
             login_entry,
             login_btn,
@@ -431,6 +447,34 @@ impl Ui {
             Box::new(|ui| ui.split.set_show_sidebar(!ui.split.shows_sidebar())),
         );
         add(
+            "pin",
+            Box::new(|ui| {
+                if ui.pin_btn.is_sensitive() {
+                    ui.pin_btn.set_active(!ui.pin_btn.is_active());
+                }
+            }),
+        );
+        add(
+            "trash",
+            Box::new(|ui| {
+                if ui.trash_btn.is_sensitive() {
+                    ui.trash_or_restore();
+                }
+            }),
+        );
+        add(
+            "info",
+            Box::new(|ui| {
+                if ui.info_btn.is_sensitive() {
+                    if ui.info_btn.popover().is_some_and(|p| p.is_visible()) {
+                        ui.info_btn.popdown();
+                    } else {
+                        ui.info_btn.popup();
+                    }
+                }
+            }),
+        );
+        add(
             "preview",
             Box::new(|ui| ui.preview_btn.set_active(!ui.preview_btn.is_active())),
         );
@@ -463,6 +507,9 @@ impl Ui {
         app.set_accels_for_action("win.new-note", &["<Control>n"]);
         app.set_accels_for_action("win.sync", &["<Control>r"]);
         app.set_accels_for_action("win.preview", &["<Control>p"]);
+        app.set_accels_for_action("win.pin", &["<Control><Alt>p"]);
+        app.set_accels_for_action("win.trash", &["<Control><Alt>d"]);
+        app.set_accels_for_action("win.info", &["<Control><Alt>i"]);
         app.set_accels_for_action("win.sidebar", &["F9"]);
         app.set_accels_for_action("win.focus-search", &["<Control>f"]);
         app.set_accels_for_action("window.close", &["<Control>w"]);
@@ -739,7 +786,11 @@ impl Ui {
             "user-trash-symbolic"
         });
         self.trash_btn
-            .set_tooltip_text(Some(if n.deleted { "Restore note" } else { "Move to trash" }));
+            .set_tooltip_text(Some(if n.deleted {
+                "Restore note (Ctrl+Alt+D)"
+            } else {
+                "Move to trash (Ctrl+Alt+D)"
+            }));
         let words = n.content.split_whitespace().count();
         self.info_lbl.set_label(&format!(
             "Created: {}\nModified: {}\n{} words · {} characters",
