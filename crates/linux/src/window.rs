@@ -199,10 +199,11 @@ impl Ui {
         header.set_title_widget(Some(&title));
         header.pack_start(&sidebar_btn);
         header.pack_start(&sort_btn);
+        header.pack_start(&trash_btn);
+        header.pack_start(&new_btn);
         header.pack_end(&menu_btn);
         header.pack_end(&preview_btn);
         header.pack_end(&info_btn);
-        header.pack_end(&trash_btn);
         header.pack_end(&pin_btn);
 
         let buffer = sourceview5::Buffer::new(None);
@@ -307,42 +308,6 @@ impl Ui {
             .bidirectional()
             .sync_create()
             .build();
-
-        // The "new note" button lives in the sidebar header while the sidebar is
-        // shown, and moves to the far left of the content header while it is hidden.
-        let place_new_btn = {
-            let new_btn = new_btn.clone();
-            let side_header = side_header.clone();
-            let header = header.clone();
-            let sidebar_btn = sidebar_btn.clone();
-            let sort_btn = sort_btn.clone();
-            move |sidebar_shown: bool| {
-                let (from, to) = if sidebar_shown {
-                    (&header, &side_header)
-                } else {
-                    (&side_header, &header)
-                };
-                // Detach from whichever bar currently holds the button.
-                if new_btn.is_ancestor(from) {
-                    from.remove(&new_btn);
-                }
-                if new_btn.parent().is_none() {
-                    if sidebar_shown {
-                        to.pack_end(&new_btn);
-                    } else {
-                        // Leftmost: pack before the sidebar toggle, which is
-                        // re-packed after it.
-                        header.remove(&sidebar_btn);
-                        header.remove(&sort_btn);
-                        to.pack_start(&new_btn);
-                        to.pack_start(&sidebar_btn);
-                        to.pack_start(&sort_btn);
-                    }
-                }
-            }
-        };
-        place_new_btn(split.shows_sidebar());
-        split.connect_show_sidebar_notify(move |s| place_new_btn(s.shows_sidebar()));
 
         let banner = adw::Banner::builder()
             .title("You're offline. Changes are saved on this computer and will sync when the connection returns.")
