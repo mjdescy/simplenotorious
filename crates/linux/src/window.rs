@@ -731,6 +731,7 @@ impl Ui {
         let mut selected_row = None;
         for n in &notes {
             let row = make_row(n);
+            self.attach_context_menu(&row, n.pinned, mode == Mode::Trash);
             self.list.append(&row);
             if current.as_deref() == Some(n.id.as_str()) {
                 selected_row = Some(row);
@@ -768,6 +769,38 @@ impl Ui {
         if notes.is_empty() && self.current().is_none() {
             self.content.set_visible_child_name("empty");
         }
+    }
+
+    /// Right-click menu for a sidebar row: Pin/Unpin, then Move to trash/Restore.
+    fn attach_context_menu(self: &Rc<Self>, row: &gtk::ListBoxRow, pinned: bool, in_trash: bool) {
+        let menu = gio::Menu::new();
+        menu.append(
+            Some(if pinned { "Unpin note" } else { "Pin note to top" }),
+            Some("win.pin"),
+        );
+        menu.append(
+            Some(if in_trash { "Restore from trash" } else { "Move to trash" }),
+            Some("win.trash"),
+        );
+        let click = gtk::GestureClick::builder().button(3).build();
+        let ui = self.clone();
+        let row2 = row.clone();
+        click.connect_pressed(move |g, _, x, y| {
+            g.set_state(gtk::EventSequenceState::Claimed);
+            // The actions operate on the open note, so open the clicked one first.
+            ui.list.select_row(Some(&row2));
+            let pop = gtk::PopoverMenu::from_model(Some(&menu));
+            pop.set_parent(&row2);
+            pop.set_has_arrow(false);
+            pop.set_halign(gtk::Align::Start);
+            pop.set_pointing_to(Some(&gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+            pop.connect_closed(|p| {
+                let p = p.clone();
+                glib::idle_add_local_once(move || p.unparent());
+            });
+            pop.popup();
+        });
+        row.add_controller(click);
     }
 
     fn select(self: &Rc<Self>, id: Option<String>) {

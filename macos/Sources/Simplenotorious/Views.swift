@@ -102,6 +102,17 @@ struct SidebarView: View {
             List(selection: $model.selection) {
                 ForEach(model.notes) { n in
                     NoteRow(note: n).tag(n.id)
+                        .contextMenu {
+                            // Both actions operate on the open note, so open the clicked one first.
+                            Button(n.pinned ? "Unpin note" : "Pin note to top") {
+                                model.selection = n.id
+                                model.togglePin()
+                            }
+                            Button(model.filter == .trash ? "Restore from trash" : "Move to trash") {
+                                model.selection = n.id
+                                model.trashOrRestore()
+                            }
+                        }
                 }
             }
             .listStyle(.sidebar)
