@@ -19,12 +19,30 @@ pub struct Filter {
     pub query: Option<String>,
     pub tag: Option<String>,
     pub trash: bool,
+    pub sort: crate::settings::SortType,
+    pub reverse: bool,
 }
 
 /// Main note database (SQLite). Every mutation is committed immediately, so a
 /// crash or a dropped network connection can never lose an edit.
 pub struct Store {
     conn: Mutex<Connection>,
+}
+
+/// Sort notes (pinned first), by `sort` in its default direction, flipped if `reverse`.
+/// Dates default to descending, alphabetical to ascending.
+pub fn sort_notes(notes: &mut [Note], sort: crate::settings::SortType, reverse: bool) {
+    use crate::settings::SortType::*;
+    use std::cmp::Ordering;
+    notes.sort_by(|a, b| {
+        let ord = match sort {
+            DateModified => b.modified.cmp(&a.modified),
+            DateCreated => b.created.cmp(&a.created),
+            Alphabetical => a.title().to_lowercase().cmp(&b.title().to_lowercase()),
+        };
+        let ord = if reverse { ord.reverse() } else { ord };
+        b.pinned.cmp(&a.pinned).then(ord).then(Ordering::Equal)
+    });
 }
 
 fn row_to_note(r: &Row) -> rusqlite::Result<Note> {
@@ -110,7 +128,7 @@ impl Store {
         if pattern.is_some() {
             sql.push_str(" AND content LIKE ?2 ESCAPE '\\'");
         }
-        sql.push_str(" ORDER BY pinned DESC, modified DESC");
+        sql.push_str(" ORDER BY pinned DESC");
         let mut st = c.prepare(&sql)?;
         let map = |r: &Row| row_to_note(r);
         let rows: Vec<Note> = match &pattern {
@@ -121,13 +139,15 @@ impl Store {
                 .query_map(params![f.trash], map)?
                 .collect::<std::result::Result<_, _>>()?,
         };
-        Ok(match &f.tag {
+        let mut rows: Vec<Note> = match &f.tag {
             Some(t) => rows
                 .into_iter()
                 .filter(|n| n.tags.iter().any(|x| x.eq_ignore_ascii_case(t)))
                 .collect(),
             None => rows,
-        })
+        };
+        sort_notes(&mut rows, f.sort, f.reverse);
+        Ok(rows)
     }
 
     pub fn all_tags(&self) -> Result<Vec<(String, usize)>> {

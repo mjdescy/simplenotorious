@@ -15,5 +15,5 @@ mod core;
 pub use core::{Core, Event, Paths, SyncStatus};
 pub use error::{Error, Result};
 pub use model::{Note, NoteSummary};
-pub use settings::{EmphasisMarker, Settings, Theme};
+pub use settings::{EmphasisMarker, Settings, SortType, Theme};
 pub use store::Filter;

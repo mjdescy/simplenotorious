@@ -1,7 +1,7 @@
 use crate::prefs;
 use adw::prelude::*;
 use gtk::{gio, glib};
-use simplenotorious_core::{Core, Event, Filter, NoteSummary, SyncStatus};
+use simplenotorious_core::{Core, Event, Filter, NoteSummary, SortType, SyncStatus};
 use sourceview5::prelude::*;
 use std::{cell::RefCell, rc::Rc, time::Duration};
 use webkit6::prelude::*;
@@ -120,6 +120,26 @@ impl Ui {
             .icon_name("sidebar-show-symbolic")
             .tooltip_text("Toggle sidebar (F9)")
             .build();
+        let sort_menu = gio::Menu::new();
+        let sort_types = gio::Menu::new();
+        for (label, target) in [
+            ("Date Modified", "date_modified"),
+            ("Date Created", "date_created"),
+            ("Alphabetical", "alphabetical"),
+        ] {
+            let item = gio::MenuItem::new(Some(label), None);
+            item.set_action_and_target_value(Some("win.sort-by"), Some(&target.to_variant()));
+            sort_types.append_item(&item);
+        }
+        sort_menu.append_section(None, &sort_types);
+        let sort_rev = gio::Menu::new();
+        sort_rev.append(Some("Reverse"), Some("win.sort-reverse"));
+        sort_menu.append_section(None, &sort_rev);
+        let sort_btn = gtk::MenuButton::builder()
+            .icon_name("view-sort-descending-symbolic")
+            .tooltip_text("Sort notes")
+            .menu_model(&sort_menu)
+            .build();
         let title = adw::WindowTitle::new("Simplenotorious", "");
         let preview_btn = gtk::ToggleButton::builder()
             .icon_name("view-reveal-symbolic")
@@ -178,6 +198,7 @@ impl Ui {
         let header = adw::HeaderBar::new();
         header.set_title_widget(Some(&title));
         header.pack_start(&sidebar_btn);
+        header.pack_start(&sort_btn);
         header.pack_end(&menu_btn);
         header.pack_end(&preview_btn);
         header.pack_end(&info_btn);
@@ -294,6 +315,7 @@ impl Ui {
             let side_header = side_header.clone();
             let header = header.clone();
             let sidebar_btn = sidebar_btn.clone();
+            let sort_btn = sort_btn.clone();
             move |sidebar_shown: bool| {
                 let (from, to) = if sidebar_shown {
                     (&header, &side_header)
@@ -311,8 +333,10 @@ impl Ui {
                         // Leftmost: pack before the sidebar toggle, which is
                         // re-packed after it.
                         header.remove(&sidebar_btn);
+                        header.remove(&sort_btn);
                         to.pack_start(&new_btn);
                         to.pack_start(&sidebar_btn);
+                        to.pack_start(&sort_btn);
                     }
                 }
             }
@@ -432,6 +456,32 @@ impl Ui {
             a.connect_activate(move |_, _| f(&ui2));
             ui.win.add_action(&a);
         };
+        {
+            let st = ui.core.settings();
+            let by = gio::SimpleAction::new_stateful(
+                "sort-by",
+                Some(glib::VariantTy::STRING),
+                &st.sort_type.as_str().to_variant(),
+            );
+            let ui2 = ui.clone();
+            by.connect_activate(move |a, p| {
+                let Some(v) = p.and_then(|p| p.get::<String>()) else { return };
+                let Some(t) = SortType::from_str(&v) else { return };
+                a.set_state(&v.to_variant());
+                let _ = ui2.core.update_settings(|s| s.sort_type = t);
+                ui2.refresh_list();
+            });
+            ui.win.add_action(&by);
+            let rev = gio::SimpleAction::new_stateful("sort-reverse", None, &st.sort_reverse.to_variant());
+            let ui2 = ui.clone();
+            rev.connect_activate(move |a, _| {
+                let on = !a.state().and_then(|s| s.get::<bool>()).unwrap_or(false);
+                a.set_state(&on.to_variant());
+                let _ = ui2.core.update_settings(|s| s.sort_reverse = on);
+                ui2.refresh_list();
+            });
+            ui.win.add_action(&rev);
+        }
         add("new-note", Box::new(|ui| ui.new_note()));
         add("sync", Box::new(|ui| ui.core.sync_now()));
         add("import", Box::new(|ui| ui.import_json()));
@@ -718,6 +768,7 @@ impl Ui {
                 None
             },
             trash: mode == Mode::Trash,
+            ..Default::default()
         };
         let notes = self.core.list(&filter).unwrap_or_default();
 

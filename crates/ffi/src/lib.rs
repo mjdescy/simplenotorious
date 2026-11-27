@@ -103,6 +103,7 @@ fn dispatch(c: &Core, method: &str, a: &Value) -> Result<Value, String> {
                 query: a["query"].as_str().map(str::to_string),
                 tag: a["tag"].as_str().map(str::to_string),
                 trash: a["trash"].as_bool().unwrap_or(false),
+                ..Default::default()
             };
             ser(c.list(&f).map_err(e)?)
         }

@@ -218,7 +218,9 @@ impl Core {
 
     // ---------- notes ----------
     pub fn list(&self, f: &Filter) -> Result<Vec<NoteSummary>> {
-        Ok(self.inner.store.list(f)?.iter().map(Note::summary).collect())
+        let st = self.settings();
+        let f = Filter { sort: st.sort_type, reverse: st.sort_reverse, ..f.clone() };
+        Ok(self.inner.store.list(&f)?.iter().map(Note::summary).collect())
     }
 
     pub fn tags(&self) -> Result<Vec<(String, usize)>> {

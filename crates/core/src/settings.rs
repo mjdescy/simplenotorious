@@ -30,6 +30,35 @@ impl EmphasisMarker {
     }
 }
 
+/// Which note property the sidebar list is sorted by.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SortType {
+    #[default]
+    DateModified,
+    DateCreated,
+    Alphabetical,
+}
+
+impl SortType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SortType::DateModified => "date_modified",
+            SortType::DateCreated => "date_created",
+            SortType::Alphabetical => "alphabetical",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<SortType> {
+        match s {
+            "date_modified" => Some(SortType::DateModified),
+            "date_created" => Some(SortType::DateCreated),
+            "alphabetical" => Some(SortType::Alphabetical),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
@@ -47,6 +76,10 @@ pub struct Settings {
     pub bold_marker: EmphasisMarker,
     /// App-wide text scale factor; 1.0 is the default size.
     pub text_scale: f64,
+    /// Sidebar sort type. Dates default to descending, alphabetical to ascending.
+    pub sort_type: SortType,
+    /// Reverse the default order of `sort_type`.
+    pub sort_reverse: bool,
 }
 
 impl Default for Settings {
@@ -61,6 +94,8 @@ impl Default for Settings {
             italic_marker: EmphasisMarker::Asterisk,
             bold_marker: EmphasisMarker::Underscore,
             text_scale: 1.0,
+            sort_type: SortType::DateModified,
+            sort_reverse: false,
         }
     }
 }
