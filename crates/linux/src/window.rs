@@ -1,7 +1,7 @@
 use crate::prefs;
 use adw::prelude::*;
 use gtk::{gio, glib};
-use simplenotorious_core::{Core, Event, Filter, NoteSummary, SortType, SyncStatus};
+use simplenotorious_core::{content_hash, Core, Event, Filter, NoteSummary, Session, SortType, SyncStatus};
 use sourceview5::prelude::*;
 use std::{cell::RefCell, rc::Rc, time::Duration};
 use webkit6::prelude::*;
@@ -60,7 +60,15 @@ pub fn build(app: &adw::Application, core: &Core) {
     let ui = Ui::new(app, core);
     ui.refresh_list();
     ui.on_status(core.status());
+    ui.restore_session();
     ui.win.present();
+    ui.restore_view_position();
+    // Session end (logout/shutdown) while the window is still open.
+    let ui2 = ui.clone();
+    app.connect_shutdown(move |_| {
+        ui2.save_now();
+        ui2.save_session();
+    });
 }
 
 impl Ui {
@@ -370,11 +378,13 @@ impl Ui {
 
         let toasts = adw::ToastOverlay::new();
         toasts.set_child(Some(&root));
+        let sess = core.settings().session;
         let win = adw::ApplicationWindow::builder()
             .application(app)
             .title("Simplenotorious")
-            .default_width(1000)
-            .default_height(680)
+            .default_width(if sess.width > 0 { sess.width } else { 1000 })
+            .default_height(if sess.height > 0 { sess.height } else { 680 })
+            .maximized(sess.maximized)
             .content(&toasts)
             .build();
 
@@ -645,6 +655,7 @@ impl Ui {
             let ui2 = ui.clone();
             ui.win.connect_close_request(move |_| {
                 ui2.save_now();
+                ui2.save_session();
                 glib::Propagation::Proceed
             });
         }
@@ -842,6 +853,104 @@ impl Ui {
         } else {
             self.content.set_visible_child_name("editor");
         }
+    }
+
+    // -------------------------------------------------------------- session
+
+    /// Persist window/selection/cursor state so the next launch resumes here.
+    fn save_session(&self) {
+        if self.root.visible_child_name().as_deref() != Some("main") {
+            return;
+        }
+        let (width, height) = self.win.default_size();
+        let maximized = self.win.is_maximized();
+        let old = self.core.settings().session;
+        let note_id = self.current();
+        let text = self.buffer_text();
+        let cursor = self.buffer.iter_at_mark(&self.buffer.get_insert()).offset();
+        let top = self
+            .view
+            .iter_at_location(0, 0)
+            .map(|i| i.offset())
+            .unwrap_or(0);
+        let filter = match self.mode() {
+            Mode::All => String::new(),
+            Mode::Trash => "trash".to_string(),
+            Mode::Tag(t) => format!("tag:{t}"),
+        };
+        let session = Session {
+            // Keep the last normal size while maximized.
+            width: if maximized { old.width } else { width },
+            height: if maximized { old.height } else { height },
+            maximized,
+            filter,
+            search: self.search.text().to_string(),
+            cursor: if note_id.is_some() { cursor } else { 0 },
+            scroll: if note_id.is_some() { top } else { 0 },
+            content_hash: content_hash(&text),
+            preview: self.st.borrow().preview,
+            note_id,
+        };
+        if session != old {
+            let _ = self.core.update_settings(|s| s.session = session);
+        }
+    }
+
+    /// Re-apply the saved sidebar filter, search and open note. Anything that no
+    /// longer exists (deleted tag, note removed by a sync) is skipped, leaving
+    /// no note selected.
+    fn restore_session(self: &Rc<Self>) {
+        let s = self.core.settings().session;
+        if let Some(t) = s.filter.strip_prefix("tag:") {
+            let pos = self.st.borrow().mode_tags.iter().position(|x| x == t);
+            if let Some(i) = pos {
+                self.filter_dd.set_selected(i as u32 + 2);
+            }
+        } else if s.filter == "trash" {
+            self.filter_dd.set_selected(1);
+        }
+        if !s.search.is_empty() {
+            self.search.set_text(&s.search);
+        }
+        self.refresh_list();
+
+        let Some(id) = s.note_id.map(|i| self.core.resolve_id(&i)) else { return };
+        let mut row = self.list.first_child();
+        while let Some(r) = row {
+            if r.widget_name() == id.as_str() {
+                if let Some(r) = r.downcast_ref::<gtk::ListBoxRow>() {
+                    self.list.select_row(Some(r)); // opens the note
+                }
+                break;
+            }
+            row = r.next_sibling();
+        }
+        if self.current().as_deref() != Some(id.as_str()) {
+            return; // note gone or filtered out: start with nothing selected
+        }
+        // Offsets only apply to the exact text they were saved against.
+        if content_hash(&self.buffer_text()) == s.content_hash {
+            let at = |o: i32| self.buffer.iter_at_offset(o.clamp(0, self.buffer.char_count()));
+            self.buffer.place_cursor(&at(s.cursor));
+        }
+        if s.preview {
+            self.preview_btn.set_active(true);
+        } else {
+            self.view.grab_focus();
+        }
+    }
+
+    /// Scroll the editor back to where it was; deferred until the view has a size.
+    fn restore_view_position(self: &Rc<Self>) {
+        let s = self.core.settings().session;
+        if self.current().is_none() || content_hash(&self.buffer_text()) != s.content_hash {
+            return;
+        }
+        let ui = self.clone();
+        glib::idle_add_local_once(move || {
+            let it = ui.buffer.iter_at_offset(s.scroll.clamp(0, ui.buffer.char_count()));
+            ui.view.scroll_to_iter(&mut it.clone(), 0.0, true, 0.0, 0.0);
+        });
     }
 
     fn buffer_text(&self) -> String {

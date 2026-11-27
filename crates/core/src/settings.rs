@@ -59,9 +59,35 @@ impl SortType {
     }
 }
 
+/// UI state captured on exit so the app can resume where it left off.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct Session {
+    pub width: i32,
+    pub height: i32,
+    pub maximized: bool,
+    /// Sidebar filter: "" = All Notes, "trash", or "tag:<name>".
+    pub filter: String,
+    pub search: String,
+    pub note_id: Option<String>,
+    /// Cursor and top-visible-line offsets (in chars) within the note.
+    pub cursor: i32,
+    pub scroll: i32,
+    /// Hash of the note text the offsets refer to; offsets are ignored if it changed.
+    pub content_hash: u64,
+    pub preview: bool,
+}
+
+/// FNV-1a: a hash that is stable across builds, unlike `DefaultHasher`.
+pub fn content_hash(s: &str) -> u64 {
+    s.bytes()
+        .fold(0xcbf29ce484222325, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3))
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
+    pub session: Session,
     pub theme: Theme,
     /// Folder of plain-text `.md` files mirroring the notes.
     pub notes_folder: Option<PathBuf>,
@@ -87,6 +113,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            session: Session::default(),
             theme: Theme::System,
             notes_folder: None,
             json_sync_enabled: false,
