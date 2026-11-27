@@ -37,6 +37,7 @@ struct Ui {
     filter_dd: gtk::DropDown,
     filter_model: gtk::StringList,
     list: gtk::ListBox,
+    list_scroll: gtk::ScrolledWindow,
     status_lbl: gtk::Label,
     content: gtk::Stack,
     title: adw::WindowTitle,
@@ -399,6 +400,7 @@ impl Ui {
             filter_dd,
             filter_model,
             list,
+            list_scroll,
             status_lbl,
             content,
             title,
@@ -885,6 +887,11 @@ impl Ui {
             maximized,
             filter,
             search: self.search.text().to_string(),
+            list_top: self
+                .list
+                .row_at_y(self.list_scroll.vadjustment().value() as i32)
+                .map(|r| r.widget_name().to_string())
+                .unwrap_or_default(),
             cursor: if note_id.is_some() { cursor } else { 0 },
             scroll: if note_id.is_some() { top } else { 0 },
             content_hash: content_hash(&text),
@@ -940,9 +947,34 @@ impl Ui {
         }
     }
 
+    /// Scroll the note list so the saved top row is at the top again. If that
+    /// note is gone, keep the selected row in view instead.
+    fn restore_list_position(self: &Rc<Self>, top_id: &str) {
+        let top_id = self.core.resolve_id(top_id);
+        let ui = self.clone();
+        glib::idle_add_local_once(move || {
+            let mut row = ui.list.first_child();
+            while let Some(r) = row {
+                if !top_id.is_empty() && r.widget_name() == top_id.as_str() {
+                    if let Some(b) = r.compute_bounds(&ui.list) {
+                        ui.list_scroll.vadjustment().set_value(b.y() as f64);
+                    }
+                    return;
+                }
+                row = r.next_sibling();
+            }
+            if let Some(sel) = ui.list.selected_row() {
+                if let Some(b) = sel.compute_bounds(&ui.list) {
+                    ui.list_scroll.vadjustment().set_value(b.y() as f64);
+                }
+            }
+        });
+    }
+
     /// Scroll the editor back to where it was; deferred until the view has a size.
     fn restore_view_position(self: &Rc<Self>) {
         let s = self.core.settings().session;
+        self.restore_list_position(&s.list_top);
         if self.current().is_none() || content_hash(&self.buffer_text()) != s.content_hash {
             return;
         }

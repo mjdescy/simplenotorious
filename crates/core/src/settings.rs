@@ -70,6 +70,8 @@ pub struct Session {
     pub filter: String,
     pub search: String,
     pub note_id: Option<String>,
+    /// Id of the note row at the top of the sidebar list.
+    pub list_top: String,
     /// Cursor and top-visible-line offsets (in chars) within the note.
     pub cursor: i32,
     pub scroll: i32,
