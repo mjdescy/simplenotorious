@@ -94,6 +94,22 @@ pub fn show(win: &adw::ApplicationWindow, core: &Core, on_logout: Rc<dyn Fn()>) 
     g.add(&bold);
     page.add(&g);
 
+    // --- notes ---
+    let g = adw::PreferencesGroup::builder().title("Notes").build();
+    let confirm = adw::SwitchRow::builder()
+        .title("Confirm before moving to trash")
+        .subtitle("Ask for confirmation when moving a note to the trash")
+        .active(s.confirm_trash)
+        .build();
+    {
+        let core = core.clone();
+        confirm.connect_active_notify(move |r| {
+            let _ = core.update_settings(|s| s.confirm_trash = r.is_active());
+        });
+    }
+    g.add(&confirm);
+    page.add(&g);
+
     // --- account ---
     let g = adw::PreferencesGroup::builder().title("SimpleNote account").build();
     let acct = adw::ActionRow::builder()

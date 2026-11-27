@@ -80,6 +80,8 @@ pub struct Settings {
     pub sort_type: SortType,
     /// Reverse the default order of `sort_type`.
     pub sort_reverse: bool,
+    /// Ask for confirmation before moving a note to the trash.
+    pub confirm_trash: bool,
 }
 
 impl Default for Settings {
@@ -96,6 +98,7 @@ impl Default for Settings {
             text_scale: 1.0,
             sort_type: SortType::DateModified,
             sort_reverse: false,
+            confirm_trash: true,
         }
     }
 }

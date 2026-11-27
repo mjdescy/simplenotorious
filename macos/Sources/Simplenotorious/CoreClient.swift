@@ -65,6 +65,7 @@ struct AppSettings: Codable, Equatable {
     var italicMarker: EmphasisMarker = .asterisk
     var boldMarker: EmphasisMarker = .underscore
     var textScale: Double = 1.0
+    var confirmTrash: Bool = true
 }
 
 // MARK: - Bridge to the Rust core

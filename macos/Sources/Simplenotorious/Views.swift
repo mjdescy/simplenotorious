@@ -110,7 +110,7 @@ struct SidebarView: View {
                             }
                             Button(model.filter == .trash ? "Restore from trash" : "Move to trash") {
                                 model.selection = n.id
-                                model.trashOrRestore()
+                                model.requestTrashOrRestore()
                             }
                         }
                 }
@@ -204,7 +204,7 @@ struct DetailView: View {
                 Button { model.togglePin() } label: {
                     Image(systemName: model.openNote?.pinned == true ? "pin.fill" : "pin")
                 }.help("Pin note (⌃⌥P)").keyboardShortcut("p", modifiers: [.control, .option]).disabled(model.openNote == nil)
-                Button { model.trashOrRestore() } label: {
+                Button { model.requestTrashOrRestore() } label: {
                     Image(systemName: model.openNote?.deleted == true ? "arrow.uturn.backward" : "trash")
                 }.help(model.openNote?.deleted == true ? "Restore note (⌃⌥D)" : "Move to trash (⌃⌥D)")
                     .keyboardShortcut("d", modifiers: [.control, .option]).disabled(model.openNote == nil)
@@ -214,6 +214,12 @@ struct DetailView: View {
                 Toggle(isOn: $model.showPreview) { Image(systemName: "eye") }
                     .toggleStyle(.button).help("Toggle Markdown preview (⌘P)").disabled(model.openNote == nil)
             }
+        }
+        .confirmationDialog("Move note to trash?", isPresented: $model.confirmTrash) {
+            Button("Move to Trash", role: .destructive) { model.trashOrRestore() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You can restore it later from the Trash.")
         }
     }
 }
@@ -328,6 +334,11 @@ struct SettingsView: View {
                     Text("__text__").tag(EmphasisMarker.underscore)
                 }
                 Text("Characters used when formatting text as italic or bold.").font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Notes") {
+                Toggle("Confirm before moving to trash", isOn: Binding(
+                    get: { model.settings.confirmTrash },
+                    set: { model.updateSetting(["confirm_trash": $0]) }))
             }
             Section("SimpleNote account") {
                 HStack {

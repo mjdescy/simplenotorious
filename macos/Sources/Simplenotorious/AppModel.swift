@@ -24,6 +24,7 @@ final class AppModel: ObservableObject {
     @Published var loginError: String?
     @Published var loggingIn = false
     @Published var toast: String?
+    @Published var confirmTrash = false
     @Published var columnVisibility: NavigationSplitViewVisibility = .all
 
     private var openID: String?
@@ -239,6 +240,16 @@ final class AppModel: ObservableObject {
         guard let n = openNote else { return }
         openNote = try? core?.call("set_pinned", ["id": n.id, "pinned": !n.pinned], as: Note.self)
         refresh()
+    }
+
+    /// Asks for confirmation first (when enabled) before moving a note to the trash.
+    func requestTrashOrRestore() {
+        guard let n = openNote else { return }
+        if !n.deleted && settings.confirmTrash {
+            confirmTrash = true
+        } else {
+            trashOrRestore()
+        }
     }
 
     func trashOrRestore() {

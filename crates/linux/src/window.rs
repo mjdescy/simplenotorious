@@ -1156,6 +1156,29 @@ impl Ui {
         self.save_now();
         let Some(id) = self.current() else { return };
         let deleted = self.core.get(&id).ok().flatten().map(|n| n.deleted).unwrap_or(false);
+        if deleted || !self.core.settings().confirm_trash {
+            self.do_trash_or_restore();
+            return;
+        }
+        let d = adw::AlertDialog::new(
+            Some("Move note to trash?"),
+            Some("You can restore it later from the Trash."),
+        );
+        d.add_responses(&[("cancel", "Cancel"), ("trash", "Move to Trash")]);
+        d.set_response_appearance("trash", adw::ResponseAppearance::Destructive);
+        d.set_default_response(Some("cancel"));
+        d.set_close_response("cancel");
+        let ui = self.clone();
+        d.choose(Some(&self.win), None::<&gio::Cancellable>, move |resp| {
+            if resp.as_str() == "trash" {
+                ui.do_trash_or_restore();
+            }
+        });
+    }
+
+    fn do_trash_or_restore(self: &Rc<Self>) {
+        let Some(id) = self.current() else { return };
+        let deleted = self.core.get(&id).ok().flatten().map(|n| n.deleted).unwrap_or(false);
         let r = if deleted {
             self.core.restore(&id)
         } else {
