@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <g transform="translate(-9.125 -14.5) scale(1.125)">
+    <!-- cloud front profile -->
+    <path d="M42 86 A18 18 0 1 1 44 50.11 A26 26 0 1 1 95.66 54.17 A16 16 0 1 1 98 86 Z" fill="#62a0ea"/>
+    <!-- cloud -->
+    <path d="M42 82 A18 18 0 1 1 44 46.11 A26 26 0 1 1 95.66 50.17 A16 16 0 1 1 98 82 Z" fill="#99c1f1"/>
+    <!-- notepad front profile -->
+    <rect x="16" y="40" width="68" height="76" rx="6" fill="#c0bfbc"/>
+    <!-- notepad -->
+    <rect x="16" y="36" width="68" height="76" rx="6" fill="#ffffff"/>
+    <g fill="#9a9996">
+      <circle cx="29" cy="45" r="2.5"/>
+      <circle cx="43" cy="45" r="2.5"/>
+      <circle cx="57" cy="45" r="2.5"/>
+      <circle cx="71" cy="45" r="2.5"/>
+    </g>
+    <g fill="#5e5c64">
+      <rect x="26.5" y="28" width="5" height="18" rx="2.5"/>
+      <rect x="40.5" y="28" width="5" height="18" rx="2.5"/>
+      <rect x="54.5" y="28" width="5" height="18" rx="2.5"/>
+      <rect x="68.5" y="28" width="5" height="18" rx="2.5"/>
+    </g>
+    <!-- heading -->
+    <path d="M32 58l-2 14M40 58l-2 14M27 63h15M26 68h15" fill="none" stroke="#3584e4" stroke-width="3" stroke-linecap="round"/>
+    <rect x="46" y="61" width="26" height="8" rx="4" fill="#3d3846"/>
+    <!-- text -->
+    <rect x="26" y="80" width="48" height="5" rx="2.5" fill="#9a9996"/>
+    <rect x="26" y="90" width="48" height="5" rx="2.5" fill="#9a9996"/>
+    <rect x="26" y="100" width="32" height="5" rx="2.5" fill="#9a9996"/>
+  </g>
+</svg>

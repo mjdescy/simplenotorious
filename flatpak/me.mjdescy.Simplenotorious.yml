@@ -31,6 +31,7 @@ modules:
       - install -Dm644 crates/linux/data/licenses.json -t /app/share/simplenotorious
       - install -Dm644 flatpak/me.mjdescy.Simplenotorious.metainfo.xml -t /app/share/metainfo
       - install -Dm644 flatpak/me.mjdescy.Simplenotorious.svg -t /app/share/icons/hicolor/scalable/apps
+      - install -Dm644 flatpak/me.mjdescy.Simplenotorious-symbolic.svg -t /app/share/icons/hicolor/symbolic/apps
     sources:
       - type: dir
         path: ..

@@ -535,6 +535,7 @@ impl Ui {
             about.connect_activate(move |_, _| {
                 let dialog = adw::AboutDialog::builder()
                     .application_name("Simplenotorious")
+                    .application_icon(crate::APP_ID)
                     .developer_name("Simplenotorious")
                     .version(env!("CARGO_PKG_VERSION"))
                     .comments(
