@@ -1,4 +1,4 @@
-use crate::prefs;
+use crate::{licenses, prefs};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use simplenotorious_core::{content_hash, Core, Event, Filter, NoteSummary, Session, SortType, SyncStatus};
@@ -533,14 +533,15 @@ impl Ui {
         {
             let ui = ui.clone();
             about.connect_activate(move |_, _| {
-                adw::AboutDialog::builder()
+                let dialog = adw::AboutDialog::builder()
                     .application_name("Simplenotorious")
                     .developer_name("Simplenotorious")
                     .version(env!("CARGO_PKG_VERSION"))
                     .comments("A native Markdown notes app for SimpleNote.")
                     .license_type(gtk::License::MitX11)
-                    .build()
-                    .present(Some(&ui.win));
+                    .build();
+                licenses::add_to_about(&dialog, &ui.win);
+                dialog.present(Some(&ui.win));
             });
         }
         app.add_action(&about);

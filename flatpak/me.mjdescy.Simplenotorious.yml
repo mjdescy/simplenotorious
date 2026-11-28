@@ -28,6 +28,7 @@ modules:
       - cargo --offline build --release --verbose --manifest-path crates/linux/Cargo.toml
       - install -Dm755 crates/linux/target/release/simplenotorious -t /app/bin
       - install -Dm644 crates/linux/data/me.mjdescy.Simplenotorious.desktop -t /app/share/applications
+      - install -Dm644 crates/linux/data/licenses.json -t /app/share/simplenotorious
       - install -Dm644 flatpak/me.mjdescy.Simplenotorious.metainfo.xml -t /app/share/metainfo
       - install -Dm644 flatpak/me.mjdescy.Simplenotorious.svg -t /app/share/icons/hicolor/scalable/apps
     sources:

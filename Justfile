@@ -14,6 +14,10 @@ run:
 # Build, then run
 br: build run
 
+# Regenerate the third-party licenses shown in the About dialog (needs cargo-about)
+licenses:
+    nu scripts/gen-licenses.nu
+
 # Run the core tests (no GUI libraries needed)
 test:
     cargo test --workspace

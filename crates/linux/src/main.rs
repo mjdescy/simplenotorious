@@ -1,3 +1,4 @@
+mod licenses;
 mod prefs;
 mod window;
 

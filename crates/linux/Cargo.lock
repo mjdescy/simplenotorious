@@ -2362,6 +2362,8 @@ dependencies = [
  "async-channel",
  "gtk4",
  "libadwaita",
+ "serde",
+ "serde_json",
  "simplenotorious-core",
  "sourceview5",
  "webkit6",
