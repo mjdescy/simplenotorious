@@ -1,4 +1,4 @@
-use crate::{licenses, prefs};
+use crate::{about, prefs};
 use adw::prelude::*;
 use gtk::{gio, glib};
 use simplenotorious_core::{content_hash, Core, Event, Filter, NoteSummary, Session, SortType, SyncStatus};
@@ -544,7 +544,7 @@ impl Ui {
                     )
                     .license_type(gtk::License::MitX11)
                     .build();
-                licenses::add_to_about(&dialog, &ui.win);
+                about::add_to_about(&dialog, &ui.win);
                 dialog.present(Some(&ui.win));
             });
         }

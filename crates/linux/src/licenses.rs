@@ -144,60 +144,8 @@ fn list_page(nav: &adw::NavigationView, entries: Vec<Entry>) -> adw::NavigationP
         .build()
 }
 
-const FALLBACK_URI: &str = "simplenotorious:licenses";
-
-/// libadwaita has no API for extra rows on the About page, so find the built-in "Legal" row
-/// (the one that pushes the "legal" page) and append ours to its group.
-fn find_legal_row(w: &gtk::Widget) -> Option<adw::ActionRow> {
-    if let Some(row) = w.downcast_ref::<adw::ActionRow>() {
-        let a = row.upcast_ref::<gtk::Actionable>();
-        let target = a.action_target_value();
-        if a.action_name().as_deref() == Some("navigation.push")
-            && target.as_ref().and_then(|v| v.str()) == Some("legal")
-        {
-            return Some(row.clone());
-        }
-    }
-    let mut child = w.first_child();
-    while let Some(c) = child {
-        if let Some(found) = find_legal_row(&c) {
-            return Some(found);
-        }
-        child = c.next_sibling();
-    }
-    None
-}
-
-/// Adds a "Third-Party Licenses" row directly below "Legal" on the About page.
-pub fn add_to_about(dialog: &adw::AboutDialog, parent: &adw::ApplicationWindow) {
-    let group = dialog
-        .child()
-        .and_then(|c| find_legal_row(&c))
-        .and_then(|r| r.ancestor(adw::PreferencesGroup::static_type()))
-        .and_then(|g| g.downcast::<adw::PreferencesGroup>().ok());
-    let win = parent.clone();
-    if let Some(group) = group {
-        let row = adw::ActionRow::builder()
-            .title("Third-Party Licenses")
-            .activatable(true)
-            .build();
-        row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
-        row.connect_activated(move |_| show(&win));
-        group.add(&row);
-    } else {
-        dialog.add_link("Third-Party Licenses", FALLBACK_URI);
-        dialog.connect_activate_link(move |_, uri| {
-            if uri != FALLBACK_URI {
-                return false;
-            }
-            show(&win);
-            true
-        });
-    }
-}
-
 /// Third-party licenses: a list of libraries; selecting one slides over to its license text.
-fn show(parent: &impl IsA<gtk::Widget>) {
+pub fn show(parent: &impl IsA<gtk::Widget>) {
     let nav = adw::NavigationView::new();
     match load() {
         Ok(entries) => nav.add(&list_page(&nav, entries)),

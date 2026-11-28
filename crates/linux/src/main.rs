@@ -1,5 +1,7 @@
+mod about;
 mod licenses;
 mod prefs;
+mod privacy;
 mod window;
 
 use adw::prelude::*;
