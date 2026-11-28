@@ -292,10 +292,16 @@ struct PreviewView: NSViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         var lastHTML = ""
+        /// Notes arrive from the sync server and shared folders, so a link must
+        /// never be able to launch an arbitrary protocol handler.
+        private let allowedSchemes: Set<String> = ["http", "https", "mailto"]
+
         func webView(_ w: WKWebView, decidePolicyFor action: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if action.navigationType == .linkActivated, let url = action.request.url {
-                NSWorkspace.shared.open(url)
+                if let scheme = url.scheme?.lowercased(), allowedSchemes.contains(scheme) {
+                    NSWorkspace.shared.open(url)
+                }
                 decisionHandler(.cancel)
             } else {
                 decisionHandler(.allow)

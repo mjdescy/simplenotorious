@@ -5,9 +5,25 @@ mod privacy;
 mod window;
 
 use adw::prelude::*;
+use gtk::gio;
 use simplenotorious_core::{Core, Theme};
 
 pub const APP_ID: &str = "me.mjdescy.Simplenotorious";
+
+/// Protocols a link in a note may open.
+const LINK_SCHEMES: [&str; 3] = ["http", "https", "mailto"];
+
+/// Open `uri` in the user's browser or mail client, but only for ordinary web
+/// and mail links. Notes arrive from the sync server and shared folders, so
+/// clicking a link must never launch an arbitrary protocol handler.
+pub fn open_external_uri(uri: &str) {
+    let Some((scheme, _)) = uri.split_once(':') else { return };
+    let scheme = scheme.to_ascii_lowercase();
+    if !LINK_SCHEMES.contains(&scheme.as_str()) {
+        return;
+    }
+    let _ = gio::AppInfo::launch_default_for_uri(uri, None::<&gio::AppLaunchContext>);
+}
 
 pub fn apply_theme(t: Theme) {
     adw::StyleManager::default().set_color_scheme(match t {

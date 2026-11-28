@@ -256,7 +256,7 @@ impl Ui {
             };
             if action.navigation_type() == webkit6::NavigationType::LinkClicked {
                 if let Some(uri) = action.request().and_then(|r| r.uri()) {
-                    let _ = gio::AppInfo::launch_default_for_uri(&uri, None::<&gio::AppLaunchContext>);
+                    crate::open_external_uri(&uri);
                 }
                 decision.ignore();
                 return true;

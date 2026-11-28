@@ -1,4 +1,5 @@
 use pulldown_cmark::{Options, Parser, html};
+use std::collections::HashSet;
 
 const CSS_COMMON: &str = r#"
 body{font:15px/1.6 -apple-system,"Cantarell","Segoe UI",system-ui,sans-serif;margin:0;padding:28px 36px;max-width:820px;margin-inline:auto}
@@ -34,10 +35,15 @@ pub fn render_body(markdown: &str) -> String {
         Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS | Options::ENABLE_FOOTNOTES;
     let mut out = String::new();
     html::push_html(&mut out, Parser::new_ext(markdown, opts));
+    // Notes arrive from the sync server and from shared folders, so a link must
+    // never be able to launch an arbitrary protocol handler in the OS (ssh:,
+    // sms:, magnet:, …). Only ordinary web and mail links survive.
+    let schemes: HashSet<&str> = ["http", "https", "mailto"].into_iter().collect();
     let mut b = ammonia::Builder::default();
     b.add_tags(["input"])
         .add_tag_attributes("input", ["type", "checked", "disabled"])
-        .link_rel(Some("noopener noreferrer"));
+        .link_rel(Some("noopener noreferrer"))
+        .url_schemes(schemes);
     b.clean(&out).to_string()
 }
 
@@ -52,6 +58,19 @@ mod tests {
         assert!(h.contains("type=\"checkbox\""));
         assert!(h.contains("checked"));
         assert!(!h.contains("script"));
+    }
+
+    #[test]
+    fn only_web_and_mail_links_survive() {
+        let h = render_body(
+            "[a](https://example.com) [b](mailto:x@example.com) [c](ssh://host/x) \
+             [d](file:///etc/passwd) [e](javascript:alert(1)) [f](tel:+123)",
+        );
+        assert!(h.contains("https://example.com"));
+        assert!(h.contains("mailto:x@example.com"));
+        for bad in ["ssh:", "file:", "javascript:", "tel:"] {
+            assert!(!h.contains(bad), "{bad} survived: {h}");
+        }
     }
 
     #[test]
