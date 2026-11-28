@@ -69,5 +69,8 @@ podman run --rm --userns=keep-id --security-opt label=disable -v "$PWD":/w:Z -v 
 ```
 (Or inside the devcontainer: `cargo build --release`, then copy the binary from `$CARGO_TARGET_DIR/release/` to the repo.)
 
+## Privacy
+The app collects nothing: no telemetry, no analytics, no accounts with the developer. See [PRIVACY.md](PRIVACY.md).
+
 ## License
 MIT — see [LICENSE.md](LICENSE.md).
