@@ -537,7 +537,11 @@ impl Ui {
                     .application_name("Simplenotorious")
                     .developer_name("Simplenotorious")
                     .version(env!("CARGO_PKG_VERSION"))
-                    .comments("A native Markdown notes app for SimpleNote.")
+                    .comments(
+                        "<span size=\"x-large\" weight=\"bold\">Simplenotorious</span>\n\n\
+                         A native (non-Electron) Markdown notes app for SimpleNote.\n\n\
+                         This app is not affiliated with Simplenote or its owner Automattic in any way.",
+                    )
                     .license_type(gtk::License::MitX11)
                     .build();
                 licenses::add_to_about(&dialog, &ui.win);
