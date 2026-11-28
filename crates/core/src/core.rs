@@ -157,23 +157,20 @@ impl Core {
         auth::logout(&self.inner.paths.config_dir)?;
         if delete_local_notes {
             let _g = self.inner.work.lock().unwrap();
+            // Remember which files this app wrote before the store is wiped, so
+            // only they are removed. The folder may be shared with other tools
+            // (or be an existing notes directory), and their files must survive.
+            let mirrored = self.inner.store.files()?;
+            let dir = self.notes_folder();
             self.inner.store.clear_all()?;
-            if let Some(dir) = self.notes_folder_if_exists() {
-                for n in std::fs::read_dir(dir)?.flatten() {
-                    let p = n.path();
-                    if p.extension().is_some_and(|e| e == "md") || n.file_name() == folder::SIDECAR {
-                        let _ = std::fs::remove_file(p);
-                    }
-                }
+            for (_, name, _) in mirrored {
+                let _ = std::fs::remove_file(dir.join(name));
             }
+            let _ = std::fs::remove_file(dir.join(folder::SIDECAR));
         }
         self.set_status(SyncStatus::LoggedOut);
         self.emit(Event::NotesChanged);
         Ok(())
-    }
-
-    fn notes_folder_if_exists(&self) -> Option<PathBuf> {
-        Some(self.notes_folder()).filter(|p| p.exists())
     }
 
     // ---------- settings ----------
@@ -516,6 +513,24 @@ mod tests {
         c.flush_exports().unwrap();
         assert!(c.list(&Filter::default()).unwrap().is_empty());
         assert!(c.list(&Filter { trash: true, ..Default::default() }).unwrap().is_empty());
+    }
+
+    #[test]
+    fn logout_removes_only_its_own_files() {
+        let (c, _d) = core();
+        let n = c.create_note().unwrap();
+        c.update_content(&n.id, "# Mine").unwrap();
+        c.flush_exports().unwrap();
+        let dir = c.notes_folder();
+        let foreign = dir.join("unrelated.md");
+        std::fs::write(&foreign, "someone else's file").unwrap();
+
+        c.logout(true).unwrap();
+
+        assert!(!dir.join("Mine.md").exists());
+        assert!(!dir.join(folder::SIDECAR).exists());
+        assert!(foreign.exists());
+        assert!(c.list(&Filter::default()).unwrap().is_empty());
     }
 
     #[test]
