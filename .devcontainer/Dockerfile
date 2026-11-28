@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:42
+FROM registry.fedoraproject.org/fedora:43
 
 # Build dependencies for the GTK4/libadwaita/WebKitGTK app, plus runtime bits
 # needed to open a window from inside the container.
@@ -22,3 +22,7 @@ USER ${USERNAME}
 ENV CARGO_HOME=/home/${USERNAME}/.cargo RUSTUP_HOME=/home/${USERNAME}/.rustup \
     PATH=/home/${USERNAME}/.cargo/bin:$PATH
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile default --default-toolchain stable
+
+
+RUN curl -fsSL https://claude.ai/install.sh | bash
+ENV PATH=/home/${USERNAME}/.local/bin:$PATH

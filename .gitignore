@@ -11,4 +11,5 @@ flatpak/build-dir/
 flatpak/repo/
 flatpak/cargo-sources.json
 flatpak/flatpak-cargo-generator.py
+flatpak/.venv/
 *.flatpak
